@@ -1,0 +1,1 @@
+DATABASE_URL="postgres://bbbe865c478b4a622d69d7e6d20dad1dc252655c1f723a68058b7e53ab16dc5d:sk_g0O6IbvtjRrHh4GK066sC@db.prisma.io:5432/postgres?sslmode=require"
