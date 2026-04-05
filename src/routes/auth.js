@@ -1,74 +1,119 @@
-const express = require('express')
-const router = express.Router()
-const bcrypt = require('bcrypt')
-const jwt = require('jsonwebtoken')
-const { PrismaClient } = require('@prisma/client')
+const express = require('express');
+const router = express.Router();
+const bcrypt = require('bcryptjs');        // Recommended for Vercel
+const jwt = require('jsonwebtoken');
+const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
-// REGISTER
+// ====================== REGISTER ======================
 router.post('/register', async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { email, password, name } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, error: 'Email and password required' })
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Email and password are required' 
+      });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(409).json({ 
+        success: false, 
+        error: 'User with this email already exists' 
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
-      data: { 
-        email: email, 
-        password: hashedPassword 
+      data: {
+        email,
+        password: hashedPassword,
+        name: name || null
       }
-    })
+    });
 
-    res.json({ 
-      success: true, 
-      message: 'User registered successfully!', 
-      userId: user.id 
-    })
-
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully!',
+      userId: user.id
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message })
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Registration failed' });
   }
-})
+});
 
-// LOGIN
+// ====================== LOGIN ======================
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ success: false, error: 'Email and password required' })
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Email and password are required' 
+      });
     }
 
-    const user = await prisma.user.findUnique({ 
-      where: { email: email } 
-    })
+    const user = await prisma.user.findUnique({ where: { email } });
 
     if (!user) {
-      return res.status(404).json({ success: false, error: 'User not found' })
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
 
-    const valid = await bcrypt.compare(password, user.password)
-
-    if (!valid) {
-      return res.status(401).json({ success: false, error: 'Wrong password' })
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
 
     const token = jwt.sign(
-      { userId: user.id }, 
-      process.env.JWT_SECRET || 'mysupersecretkey123', 
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET || 'mysupersecretkey123',
       { expiresIn: '7d' }
-    )
+    );
 
-    res.json({ success: true, token: token })
-
+    res.json({ 
+      success: true, 
+      message: 'Login successful', 
+      token 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message })
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Login failed' });
   }
-})
+});
 
-module.exports = router
+// ====================== JWT MIDDLEWARE ======================
+const authenticateJWT = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      success: false, 
+      error: 'Authorization token required (Bearer token)' 
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'mysupersecretkey123');
+    req.user = decoded;        // This sets req.user.userId
+    next();
+  } catch (error) {
+    return res.status(403).json({ 
+      success: false, 
+      error: 'Invalid or expired token' 
+    });
+  }
+};
+
+module.exports = { 
+  router,           // For mounting routes
+  authenticateJWT   // For using in other route files
+};
