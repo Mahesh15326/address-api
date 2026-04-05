@@ -13,6 +13,7 @@ app.use('/api/districts', require('./routes/districts'))
 app.use('/api/subdistricts', require('./routes/subdistricts'))
 app.use('/api/villages', require('./routes/villages'))
 app.use('/api/auth', require('./routes/auth'))
+app.use('/api/apikeys', require('./routes/apikeys'))
 
 app.get('/', (req, res) => {
   res.json({ 
