@@ -2,8 +2,9 @@ const express = require('express')
 const router = express.Router()
 const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
+const authenticateApiKey = require('../middleware/apiKeyAuth')
 
-router.get('/', async (req, res) => {
+router.get('/', authenticateApiKey, async (req, res) => {
   try {
     const { stateId } = req.query
     if (!stateId) return res.status(400).json({ success: false, error: 'stateId is required' })
