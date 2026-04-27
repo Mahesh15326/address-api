@@ -4,9 +4,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { validateRequest, schemas } = require('../middleware/validation');
 
 // ====================== REGISTER ======================
-router.post('/register', async (req, res) => {
+router.post('/register', validateRequest(schemas.register), async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -41,7 +42,7 @@ router.post('/register', async (req, res) => {
 });
 
 // ====================== LOGIN ======================
-router.post('/login', async (req, res) => {
+router.post('/login', validateRequest(schemas.login), async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {

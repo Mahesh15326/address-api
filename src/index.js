@@ -22,6 +22,13 @@ app.use('/api/districts', limiter);
 app.use('/api/subdistricts', limiter);
 app.use('/api/villages', limiter);
 
+// API Logger middleware
+const apiLogger = require('./middleware/apiLogger');
+app.use('/api/states', apiLogger);
+app.use('/api/districts', apiLogger);
+app.use('/api/subdistricts', apiLogger);
+app.use('/api/villages', apiLogger);
+
 // Mount all routes
 app.use('/api/auth', authRoutes);
 app.use('/api/states', statesRoutes);
@@ -29,6 +36,11 @@ app.use('/api/districts', districtsRoutes);
 app.use('/api/subdistricts', subdistrictsRoutes);
 app.use('/api/villages', villagesRoutes);
 app.use('/api/apikeys', apiKeysRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ success: true, status: 'healthy', timestamp: new Date().toISOString() });
+});
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -38,6 +50,10 @@ app.get('/', (req, res) => {
     status: 'running'
   });
 });
+
+// Global error handler (must be last)
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
